@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Digital Board</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #f5f5f5;
+    }
+    #board {
+      border: 2px solid #333;
+      touch-action: none;
+      display: block;
+    }
+    .toolbar {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      z-index: 10;
+    }
+    .toolbar button {
+      margin: 0 5px;
+      padding: 6px 10px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #333;
+      color: white;
+    }
+    .toolbar input {
+      margin-left: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button onclick="undo()">Undo</button>
+    <button onclick="clearBoard()">Clear All</button>
+    <label>Color: <input type="color" id="colorPicker" value="#000000"></label>
+    <label>Size: <input type="range" id="sizePicker" min="2" max="20" value="4"></label>
+  </div>
+  <canvas id="board"></canvas>
+
+  <script>
+    const canvas = document.getElementById("board");
+    const ctx = canvas.getContext("2d");
+
+    let drawing = false;
+    let color = document.getElementById("colorPicker").value;
+    let size = document.getElementById("sizePicker").value;
+
+    let strokes = []; // sabhi strokes ki history
+    let currentStroke = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      redraw();
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    function startDraw(e) {
+      drawing = true;
+      currentStroke = [];
+      draw(e);
+    }
+
+    function endDraw() {
+      if (drawing) {
+        strokes.push({ points: currentStroke, color, size });
+      }
+      drawing = false;
+      ctx.beginPath();
+    }
+
+    function draw(e) {
+      if (!drawing) return;
+
+      let x, y;
+      if (e.touches) {
+        x = e.touches[0].clientX;
+        y = e.touches[0].clientY;
+      } else {
+        x = e.clientX;
+        y = e.clientY;
+      }
+
+      currentStroke.push({ x, y });
+
+      ctx.lineWidth = size;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = color;
+
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    }
+
+    canvas.addEventListener("mousedown", startDraw);
+    canvas.addEventListener("mouseup", endDraw);
+    canvas.addEventListener("mousemove", draw);
+
+    canvas.addEventListener("touchstart", startDraw);
+    canvas.addEventListener("touchend", endDraw);
+    canvas.addEventListener("touchmove", draw);
+
+    document.getElementById("colorPicker").addEventListener("input", (e) => {
+      color = e.target.value;
+    });
+
+    document.getElementById("sizePicker").addEventListener("input", (e) => {
+      size = e.target.value;
+    });
+
+    function clearBoard() {
+      strokes = [];
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function undo() {
+      strokes.pop(); // last stroke remove
+      redraw();
+    }
+
+    function redraw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let s of strokes) {
+        ctx.beginPath();
+        ctx.lineWidth = s.size;
+        ctx.strokeStyle = s.color;
+        for (let i = 0; i < s.points.length; i++) {
+          let p = s.points[i];
+          if (i === 0) {
+            ctx.moveTo(p.x, p.y);
+          } else {
+            ctx.lineTo(p.x, p.y);
+          }
+        }
+        ctx.stroke();
+      }
+    }
+  </script>
+</body>
+</html>
